@@ -4,12 +4,26 @@ using Newtonsoft.Json;
 
 namespace Mutsuki.Lib;
 
-public class StringMessage(string mappingFile)
+public class StringMessage
 {
-    
     private readonly List<string> _messages = new();
-    private readonly Dictionary<string, string> _mappingTable = 
-        JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(mappingFile))!;
+
+    /// <summary>
+    /// The Chinese release swaps the glyphs in FN.DAT, so its two-byte text has
+    /// to be resolved through the offset table. The Japanese original does not,
+    /// and running it through the table replaces every kanji with an unrelated
+    /// one, so without a table the same text decodes as plain Shift-JIS.
+    /// </summary>
+    private readonly Dictionary<string, string>? _mappingTable;
+
+    public StringMessage(string? mappingFile)
+    {
+        _mappingTable = mappingFile is null
+            ? null
+            : JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                File.ReadAllText(mappingFile)
+            )!;
+    }
 
     private static int RawToOffset(int jis)
     {
@@ -67,12 +81,18 @@ public class StringMessage(string mappingFile)
     
     private string GetMappingValue(int offset)
     {
-        var value = _mappingTable.FirstOrDefault(x => x.Key == offset.ToString());
+        var value = _mappingTable!.FirstOrDefault(x => x.Key == offset.ToString());
         return value.Value ?? string.Empty;
     }
 
     public void AddChineseString(byte[] data)
     {
+        if (_mappingTable is null)
+        {
+            AddShiftJISString(data);
+            return;
+        }
+
         var stringBuilder = new StringBuilder();
         for (var i = 0; i + 1 < data.Length; i += 2)
         {

@@ -69,9 +69,18 @@ public class Op61 : IOpControl
                 {
                     var optionValue = reader.ReadValue();
                     var optionText = reader.ReadFormattedTextSegments();
-                    foreach (var segment in optionText.Where(x => x.Type == 0xff))
+                    foreach (var segment in optionText)
                     {
-                        message.AddChineseString(segment.Data);
+                        switch (segment.Type)
+                        {
+                            case 0xff:
+                                message.AddChineseString(segment.Data);
+                                break;
+                            case 0xfe:
+                                // Single-byte runs are never glyph-coded.
+                                message.AddShiftJISString(segment.Data);
+                                break;
+                        }
                     }
                     options.Add(new SelectOption { Value = optionValue, Text = optionText });
                 }

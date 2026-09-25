@@ -20,8 +20,14 @@ public class Program
         [Option('o', "output", Required = true, HelpText = "Output folder to be written.")]
         public string Output { set; get; } = null!;
 
-        [Option('m', "map", Required = true, HelpText = "Map file to be used.")]
-        public string Map { set; get; } = null!;
+        [Option(
+            'm',
+            "map",
+            Required = false,
+            HelpText = "FN.DAT offset table for the Chinese release. Omit it for the "
+                + "Japanese original, whose text is plain Shift-JIS."
+        )]
+        public string? Map { set; get; }
     }
 
     private static void Main(string[] args)

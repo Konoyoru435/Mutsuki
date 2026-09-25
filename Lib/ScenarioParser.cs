@@ -82,7 +82,7 @@ public class ScenarioParser
     public readonly string FinalContent;
     public readonly string FinalString;
 
-    public ScenarioParser(Stream inputFile, String mapFile)
+    public ScenarioParser(Stream inputFile, string? mapFile)
     {
         _reader = new BinaryReader(inputFile);
         var header = ParseHeader();

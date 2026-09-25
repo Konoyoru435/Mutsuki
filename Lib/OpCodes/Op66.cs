@@ -16,9 +16,18 @@ public class Op66 : IOpControl
             args.Add(reader.ReadValue());
         }
         var text = reader.ReadFormattedTextSegments();
-        foreach (var segment in text.Where(x => x.Type == 0xff))
+        foreach (var segment in text)
         {
-            message.AddChineseString(segment.Data);
+            switch (segment.Type)
+            {
+                case 0xff:
+                    message.AddChineseString(segment.Data);
+                    break;
+                case 0xfe:
+                    // Single-byte runs are never glyph-coded.
+                    message.AddShiftJISString(segment.Data);
+                    break;
+            }
         }
 
         return $"Graphic Text, Draw Text, Command: 66 {subCommand:X2}, Arguments: {string.Join(", ", args)}, Text: {string.Join(" ", text)}";

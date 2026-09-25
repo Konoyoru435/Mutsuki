@@ -48,13 +48,11 @@ public class Decompress
                     srcCount -= 2;
                     var count = (num & 15) + 2;
                     num >>= 4;
-                    var repeat = dst[(num - 1)..];
-                    var repeatIndex = 0;
+                    var repeatIndex = dstIndex - num - 1;
 
                     for (var i = 0; (i < count) && (dstIndex < size); i++)
                     {
-                        dst[dstIndex++] = repeat[repeatIndex++];
-                        repeatIndex++;
+                        dst[dstIndex++] = dst[repeatIndex++];
                     }
                 }
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.RegularExpressions;
 using Mutsuki.Lib;
 using ShellProgressBar;
 
@@ -61,6 +62,7 @@ public class Program
                     "Starting",
                     options
                 );
+                var failures = new List<(string Name, string Reason)>();
                 foreach (var (name, data) in parser.Files)
                 {
                     progressBar.Tick($"Writing Split {name}...");
@@ -87,10 +89,35 @@ public class Program
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Failed to decompress/parse {name}: {e.Message}");
-                        throw;
+                        // Keep going so one unimplemented opcode does not hide the rest.
+                        failures.Add((name, e.Message));
                     }
                 }
+
+                progressBar.Dispose();
+                Report(failures, parser.FileCount);
             });
+    }
+
+    private static void Report(List<(string Name, string Reason)> failures, int total)
+    {
+        Console.WriteLine($"\nParsed {total - failures.Count}/{total} files.");
+
+        if (failures.Count == 0)
+        {
+            return;
+        }
+
+        var grouped = failures
+            .GroupBy(x => Regex.Replace(x.Reason, @"^Position: \d+, ", string.Empty))
+            .OrderByDescending(g => g.Count());
+
+        Console.WriteLine($"{failures.Count} failed, grouped by reason:");
+        foreach (var group in grouped)
+        {
+            var names = group.Select(x => x.Name).Take(4).ToList();
+            var suffix = group.Count() > names.Count ? $", +{group.Count() - names.Count} more" : string.Empty;
+            Console.WriteLine($"  {group.Count(),4}x  {group.Key}  [{string.Join(", ", names)}{suffix}]");
+        }
     }
 }

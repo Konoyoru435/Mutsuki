@@ -82,11 +82,11 @@ public class ScenarioParser
     public readonly string FinalContent;
     public readonly string FinalString;
 
-    public ScenarioParser(Stream inputFile, string? mapFile)
+    public ScenarioParser(Stream inputFile, IReadOnlyDictionary<string, string>? mappingTable)
     {
         _reader = new BinaryReader(inputFile);
         var header = ParseHeader();
-        var stringMessage = new StringMessage(mapFile);
+        var stringMessage = new StringMessage(mappingTable);
         var commands = ParseBody(stringMessage);
 
         FinalContent = header.ToString() + "\n" + string.Join("\n", commands);

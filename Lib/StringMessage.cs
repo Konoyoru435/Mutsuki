@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Mutsuki.Lib;
 
-public class StringMessage
+public class StringMessage(IReadOnlyDictionary<string, string>? mappingTable)
 {
     private readonly List<string> _messages = new();
 
@@ -14,15 +14,13 @@ public class StringMessage
     /// and running it through the table replaces every kanji with an unrelated
     /// one, so without a table the same text decodes as plain Shift-JIS.
     /// </summary>
-    private readonly Dictionary<string, string>? _mappingTable;
+    private readonly IReadOnlyDictionary<string, string>? _mappingTable = mappingTable;
 
-    public StringMessage(string? mappingFile)
+    public static IReadOnlyDictionary<string, string> LoadMappingTable(string mappingFile)
     {
-        _mappingTable = mappingFile is null
-            ? null
-            : JsonConvert.DeserializeObject<Dictionary<string, string>>(
+        return JsonConvert.DeserializeObject<Dictionary<string, string>>(
                 File.ReadAllText(mappingFile)
-            )!;
+            ) ?? throw new Exception($"Map file is not a JSON object: {mappingFile}");
     }
 
     private static int RawToOffset(int jis)
@@ -81,8 +79,9 @@ public class StringMessage
     
     private string GetMappingValue(int offset)
     {
-        var value = _mappingTable!.FirstOrDefault(x => x.Key == offset.ToString());
-        return value.Value ?? string.Empty;
+        return _mappingTable!.TryGetValue(offset.ToString(), out var value)
+            ? value
+            : string.Empty;
     }
 
     public void AddChineseString(byte[] data)

@@ -37,6 +37,32 @@ public class Program
             .WithParsed(opts =>
             {
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+                // Check the paths before doing any work, so a bad one is one clear
+                // error instead of the same failure repeated once per scenario.
+                if (!File.Exists(opts.Input))
+                {
+                    Fail($"Input file not found: {opts.Input}");
+                    return;
+                }
+
+                IReadOnlyDictionary<string, string>? mappingTable = null;
+                if (opts.Map is not null)
+                {
+                    if (!File.Exists(opts.Map))
+                    {
+                        Fail($"Map file not found: {opts.Map}");
+                        if (!opts.Map.Contains(Path.DirectorySeparatorChar) && !opts.Map.Contains('.'))
+                        {
+                            // '-map path' parses as '-m ap', silently dropping the path.
+                            Console.Error.WriteLine("The option is -m or --map; '-map <path>' is read as '-m ap'.");
+                        }
+                        return;
+                    }
+
+                    mappingTable = StringMessage.LoadMappingTable(opts.Map);
+                }
+
                 if (!Directory.Exists(opts.Output))
                 {
                     Directory.CreateDirectory(opts.Output);
@@ -84,7 +110,7 @@ public class Program
 
                         progressBar.Tick($"Parsing {name}...");
                         var parsedFilePath = Path.Combine(parsedFolder, name);
-                        var parsed = new ScenarioParser(new MemoryStream(decompressed), opts.Map);
+                        var parsed = new ScenarioParser(new MemoryStream(decompressed), mappingTable);
                         File.WriteAllText(parsedFilePath, parsed.FinalContent);
 
                         if (!string.IsNullOrEmpty(parsed.FinalString))
@@ -105,6 +131,12 @@ public class Program
             });
     }
 
+    private static void Fail(string message)
+    {
+        Console.Error.WriteLine(message);
+        Environment.ExitCode = 1;
+    }
+
     private static void Report(List<(string Name, string Reason)> failures, int total)
     {
         Console.WriteLine($"\nParsed {total - failures.Count}/{total} files.");
@@ -118,6 +150,7 @@ public class Program
             .GroupBy(x => Regex.Replace(x.Reason, @"^Position: \d+, ", string.Empty))
             .OrderByDescending(g => g.Count());
 
+        Environment.ExitCode = 1;
         Console.WriteLine($"{failures.Count} failed, grouped by reason:");
         foreach (var group in grouped)
         {

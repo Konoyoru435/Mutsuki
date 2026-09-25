@@ -74,7 +74,7 @@ public class StringMessage(string mappingFile)
     public void AddChineseString(byte[] data)
     {
         var stringBuilder = new StringBuilder();
-        for (var i = 0; i < data.Length; i += 2)
+        for (var i = 0; i + 1 < data.Length; i += 2)
         {
             var offset = (data[i] & 0xff) << 8 | (data[i + 1] & 0xff);
             var message = GetMappingValue(RawToOffset(offset));
